@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affirmative - Prove Your Point</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>✓</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="logo">
+                <h1>Affirmative</h1>
+                <p>Prove any point, no matter how stupid, with the help of AI</p>
+            </div>
+        </header>
+
+        <div class="creator-info">
+            <p>This app was made by Adhyaay Karnwal</p>
+            <a href="https://adhyaay-karnwal.github.io/portfolio/" target="_blank" class="portfolio-button">Learn More</a>
+        </div>
+
+        <main>
+            <div id="chat-container">
+                <div id="chat-messages"></div>
+                <div id="loading-indicator" class="hidden">
+                    <div class="loading-text">Reading prompt...</div>
+                    <div class="loading-spinner"></div>
+                </div>
+                <div id="user-input">
+                    <input type="text" id="message-input" placeholder="Help me prove that...">
+                    <button id="send-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>© 2024 Affirmative AI. Proving the unprovable.</p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import OpenAI from 'https://cdn.jsdelivr.net/npm/openai@4/+esm';
+
+        const openai = new OpenAI({ 
+            apiKey: "xai-xBQluTpjFxED75VvTwvpmzAdS7W5pHwdpC8L9Yn0CISRqgFEkNsKe6ZndcJ5CcGbbMiviI4q5b1vYJIB", 
+            baseURL: "https://api.x.ai/v1", 
+            dangerouslyAllowBrowser: true
+        });
+
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        const loadingTexts = [
+            'Reading prompt...',
+            'Searching the internet...',
+            'Gathering evidence...',
+            'Constructing arguments...',
+            'Proving your point...'
+        ];
+
+        function updateLoadingText() {
+            const loadingTextElement = loadingIndicator.querySelector('.loading-text');
+            loadingTextElement.textContent = loadingTexts[Math.floor(Math.random() * loadingTexts.length)];
+        }
+
+        function showLoading() {
+            loadingIndicator.classList.remove('hidden');
+            const loadingInterval = setInterval(updateLoadingText, 2000);
+            return loadingInterval;
+        }
+
+        function hideLoading(loadingInterval) {
+            loadingIndicator.classList.add('hidden');
+            clearInterval(loadingInterval);
+        }
+
+        function formatAIResponse(response) {
+    // Determine the initial verdict
+    const isAffirmative = /^(Yes|Affirmative)/i.test(response);
+    const isNegative = /^No/i.test(response);
+    
+    let initialVerdict = "❓ Inconclusive";
+    if (isAffirmative) initialVerdict = "✅ Proven Possible!";
+    if (isNegative) initialVerdict = "❌ Not Provable";
+
+    // Create formatted response
+    let formattedResponse = `
+        <div class="ai-response">
+            <div class="verdict">${initialVerdict}</div>
+            <div class="response-body">
+    `;
+
+    // Split response into sections
+    const sections = response.split(/(\d+\.)/).filter(Boolean);
+    let currentProofPoint = '';
+
+    sections.forEach((section, index) => {
+        if (section.match(/^\d+\.$/)) {
+            // Start of a new proof point
+            if (currentProofPoint) {
+                formattedResponse += `
+                    <div class="proof-point">
+                        ${currentProofPoint}
+                    </div>
+                `;
+            }
+            currentProofPoint = `<strong>${section}</strong>`;
+        } else if (section.trim()) {
+            // Append text to current proof point
+            currentProofPoint += ` ${section.trim()}`;
+        }
+    });
+
+    // Add last proof point
+    if (currentProofPoint) {
+        formattedResponse += `
+            <div class="proof-point">
+                ${currentProofPoint}
+            </div>
+        `;
+    }
+
+    // Add references section
+    const referencesMatch = response.match(/\*\*References:\*\*(.*)/s);
+    if (referencesMatch) {
+        formattedResponse += `
+            <div class="references">
+                <h3>Supporting Evidence</h3>
+                <ul>
+                    ${referencesMatch[1].split('\n')
+                        .filter(ref => ref.trim())
+                        .map(ref => `<li>🔬 ${ref.trim()}</li>`)
+                        .join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    formattedResponse += `</div></div>`;
+    
+    return formattedResponse;
+}
+
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            messageDiv.classList.add(isUser ? 'user-message' : 'ai-message');
+            
+            if (!isUser) {
+                // For AI messages, use the enhanced formatting
+                messageDiv.innerHTML = formatAIResponse(content);
+            } else {
+                messageDiv.textContent = content;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+
+            addMessage(userMessage, true);
+            messageInput.value = '';
+
+            const loadingInterval = showLoading();
+
+            try {
+                const completion = await openai.chat.completions.create({
+                    model: "grok-beta",
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: "You are an AI researcher helping to prove claims. Respond with: 1) A clear Yes/No verdict, 2) Numbered proof points, 3) Detailed explanations, 4) Proper scientific references. Format your response to be clear, scientific, and compelling." 
+                        },
+                        { role: "user", content: userMessage }
+                    ]
+                });
+
+                const aiResponse = completion.choices[0].message.content;
+                hideLoading(loadingInterval);
+                addMessage(aiResponse);
+            } catch (error) {
+                console.error('Error:', error);
+                hideLoading(loadingInterval);
+                addMessage('Sorry, there was an error processing your request.');
+            }
+        }
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
